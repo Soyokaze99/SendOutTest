@@ -38,7 +38,10 @@ public class ShowActivity extends Activity implements View.OnClickListener, Comp
     public TextView logText;
     public Button btn;
     public Switch tcpSwitch;
+    public Switch waitSwitch;
     public boolean isTcp = false;
+    public boolean waitForAnswer = false;
+
 
     BufferedReader readFromHost;
 
@@ -57,6 +60,9 @@ public class ShowActivity extends Activity implements View.OnClickListener, Comp
 
         tcpSwitch = (Switch)findViewById(R.id.switch1);
         tcpSwitch.setOnCheckedChangeListener(this);
+
+        waitSwitch = (Switch)findViewById(R.id.switchAnswer);
+        waitSwitch.setOnCheckedChangeListener(this);
 
         StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
         StrictMode.setThreadPolicy(policy);
@@ -111,20 +117,22 @@ public class ShowActivity extends Activity implements View.OnClickListener, Comp
 
             DatagramPacket p = new DatagramPacket(message, msg_length, local, server_port);
 
-            //ByteBuffer dupl = ByteBuffer.wrap(p.getData());
+            /*
+            ByteBuffer dupl = ByteBuffer.wrap(p.getData());
 
             Log.d("SendOutTest", "------------------------------------------ ");
-            /*
+
             byte buff;
             int i =1;
             while (dupl.position() < dupl.limit()) {
                 buff = dupl.get();
                 Log.d("SendOutTest", "byte " + String.format("%03d.", i) + ":" + String.format("%02x.", buff & 0xFF));
                 i++;
-                //if(i==headerLength) Log.d(TAG, "end of IP header------------------------------------------ ");
+                //if(i==headerLength) Log.d("SendOutTest", "end of IP header------------------------------------------ ");
             }
-            */
+
             Log.d("SendOutTest", "------------------------------------------ ");
+            */
             Log.d("SendOutTest","try sending");
             try {
                 s.send(p);
@@ -133,21 +141,24 @@ public class ShowActivity extends Activity implements View.OnClickListener, Comp
             }
             Log.d("SendOutTest", "message:");
             //s.close();
-            /*
-            msg_length = messageStr.length()+5;
-            message = new byte[msg_length*2];
-            p = new DatagramPacket(message,msg_length);
-            try {
-                //s = new DatagramSocket(server_port);
-                s.receive(p);
-            } catch (SocketException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
+
+            if(waitForAnswer){
+                msg_length = messageStr.length()+5;
+                message = new byte[msg_length*2];
+                p = new DatagramPacket(message,msg_length);
+                try {
+                    //s = new DatagramSocket(server_port);
+                    s.receive(p);
+                } catch (SocketException e) {
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                String text = new String(message, 0, p.getLength());
+                Log.d("SendOutTest", "return message:" + text);
             }
-            String text = new String(message, 0, p.getLength());
-            Log.d("SendOutTest", "message:" + text);
-            */
+
+
             s.close();
         }
         else {
@@ -161,10 +172,14 @@ public class ShowActivity extends Activity implements View.OnClickListener, Comp
                 output.println(messageStr);
                 output.flush();
 
-                BufferedReader input = new BufferedReader(new InputStreamReader(sock.getInputStream()));
-                //read line(s)
-                String st = input.readLine();
-                Log.d("SendOutTest TCP", "message received:" + st);
+
+                if(waitForAnswer){
+                    BufferedReader input = new BufferedReader(new InputStreamReader(sock.getInputStream()));
+                    //read line(s)
+                    String st = input.readLine();
+                    Log.d("SendOutTest TCP", "message received first line:" + st);
+                }
+
                 //Close connection
                 sock.close();
                 } catch (UnknownHostException e) {
@@ -177,10 +192,28 @@ public class ShowActivity extends Activity implements View.OnClickListener, Comp
 
     @Override
     public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
-            if(b) {
-                isTcp = true;
-            } else {
-                isTcp = false;
-            }
+
+        switch (compoundButton.getId()) {
+
+
+            case R.id.switch1:
+                if(b) {
+                    isTcp = true;
+                    Log.d("SendOutTest", "set to tcp");
+                } else {
+                    isTcp = false;
+                }
+                break;
+
+            case R.id.switchAnswer:
+                if(b) {
+                    waitForAnswer = true;
+                    Log.d("SendOutTest", "set to wait");
+                } else {
+                    waitForAnswer = false;
+                }
+                break;
+        }
+
     }
 }
